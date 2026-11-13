@@ -16,6 +16,10 @@ screenshots/
 *.jpeg
 *.webp
 
+# README 项目介绍截图：唯一允许入库的图片目录
+!docs/screenshots/
+!docs/screenshots/*.png
+
 # 本地环境与密钥（Key 只允许走进程环境变量）
 .env
 .env.*

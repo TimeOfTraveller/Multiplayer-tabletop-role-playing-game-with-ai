@@ -4,6 +4,26 @@
 
 仓库自带示例剧本《旧宅夜雨》，但标题、文案、玩家与胜负条件都只是剧本数据，可在 admin 编辑器中随时改写。
 
+## 界面预览
+
+桌面宽屏是「左侧状态栏 + 中间叙事 + 右侧物品栏」三栏布局：左边常驻轮次、全体玩家 HP 与剧本背景，中间按长文阅读排版叙事气泡，右边是随身物品。暗色基调、低饱和配色，正文对比度满足 WCAG AA。
+
+![桌面端对局：左侧战况与玩家 HP 列表、中间叙事气泡流、右侧物品栏和底部行动输入框](docs/screenshots/desktop-gameplay.png)
+
+平板自动收成两栏，物品栏移到左栏底部；手机（≤640px）改为单列纵向流，顶部只保留房间、轮次与自己的等级/HP，玩家卡横向滑动，输入框固定在底部并适配安全区。
+
+| 平板端对局（768px） | 手机端对局（390px） |
+| --- | --- |
+| ![平板端：左栏战况与背景，右侧叙事区，输入框保持在视口内](docs/screenshots/tablet-gameplay.png) | ![手机端：顶部精简状态、玩家卡横向滑动、叙事单列铺满、底部吸底输入框](docs/screenshots/mobile-gameplay.png) |
+
+终局时结算面板会给出胜负条件、结算叙述和每名玩家的最终状态，页面同时进入只读态；小屏下表格会自动收窄，不会横向溢出。
+
+![手机端结算面板：显示胜负条件、结算叙述与全体玩家最终等级、HP、阵营和存活状态](docs/screenshots/mobile-ending.png)
+
+`admin.html` 与玩家页共用同一套配色和字体，按剧本动态渲染全部字段与胜负条件，支持 2~4 人增删玩家。
+
+![剧本编辑器：可修改标题、世界观、开场、玩家属性与三种胜负条件，并预览保存后的完整剧本 JSON](docs/screenshots/admin-editor.png)
+
 ## 当前能力
 
 - **多人动态房间**：2~4 人，玩家名册来自剧本，不再硬编码 A/B；不同房间状态严格隔离。
@@ -35,7 +55,7 @@
 （仓库根 = 本目录）
 ├─ pom.xml                            # Maven 配置；构建输出在仓库内 target/
 ├─ mvnw / mvnw.cmd                    # Maven Wrapper，无需本机安装 mvn
-├─ .gitignore                         # 忽略 target/、日志、截图、本地环境文件
+├─ .gitignore                         # 忽略 target/、日志、本地环境文件；docs/screenshots 走白名单
 ├─ scenarios/
 │  └─ default.json                    # 剧本“版本源”（仓库里维护的唯一真相）
 ├─ src/main/java/com/example/pvp/
@@ -54,6 +74,7 @@
 │  ├─ application.yml                 # 端口、模型、剧本路径、超时、日志
 │  ├─ prompts/                        # narrative_v1/v2/v3、levelup_v1
 │  └─ static/                         # index.html（玩家页）、admin.html（编辑器）
+├─ docs/screenshots/                  # README「界面预览」引用的界面截图
 └─ README.md
 
 target/                               # 构建产物与运行副本，已被 .gitignore 忽略
