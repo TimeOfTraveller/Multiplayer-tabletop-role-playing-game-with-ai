@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剧本编辑器</title>
+    <style>
+        :root {
+            --bg: #0d0f14;
+            --panel: #151922;
+            --panel-2: #1b202b;
+            --border: #2a3140;
+            --text: #e6e8ee;
+            --muted: #8b93a7;
+            --accent: #d8a657;
+            --accent-dim: #7a5c2e;
+            --danger: #d8654f;
+            --ok: #6fbf8b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 0%, #1a1f2b 0%, var(--bg) 55%);
+            color: var(--text);
+            font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13, 15, 20, 0.85);
+        }
+
+        .identity {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--muted);
+            background: var(--panel);
+            font-size: 12px;
+        }
+
+        .badge.strong {
+            color: var(--accent);
+            border-color: var(--accent-dim);
+        }
+
+        .room-field {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .room-field input {
+            width: 120px;
+            padding: 6px 9px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            font-size: 12px;
+            outline: none;
+        }
+
+        .room-field input:focus {
+            border-color: var(--accent-dim);
+        }
+
+        .layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+            min-height: 0;
+        }
+
+        .form-pane {
+            overflow-y: auto;
+            padding: 16px 18px 24px;
+            border-right: 1px solid var(--border);
+        }
+
+        .side-pane {
+            overflow-y: auto;
+            padding: 16px 18px 24px;
+            background: rgba(21, 25, 34, 0.45);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--panel);
+            padding: 12px 14px;
+            margin-bottom: 14px;
+        }
+
+        .card-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            letter-spacing: 1px;
+            color: var(--text);
+        }
+
+        .card-title.self {
+            color: var(--accent);
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .field {
+            margin-bottom: 10px;
+        }
+
+        .field:last-child {
+            margin-bottom: 0;
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        textarea,
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel-2);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            line-height: 1.6;
+            outline: none;
+            resize: vertical;
+        }
+
+        textarea:focus,
+        input:focus {
+            border-color: var(--accent-dim);
+        }
+
+        textarea.background-input {
+            min-height: 96px;
+        }
+
+        textarea.goal-input {
+            min-height: 70px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .row.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .row.three {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .section-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 4px 0 12px;
+        }
+
+        .section-head .label {
+            margin-bottom: 2px;
+        }
+
+        .check-field {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .check-field:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .check-field > label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .check-field input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--accent);
+        }
+
+        .rule-hint {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 11.5px;
+            line-height: 1.6;
+        }
+
+        button.remove-player {
+            padding: 4px 10px;
+            font-size: 11px;
+            color: var(--danger);
+            border-color: rgba(216, 101, 79, 0.45);
+            background: transparent;
+        }
+
+        button.remove-player:hover {
+            border-color: var(--danger);
+        }
+
+        @media (max-width: 620px) {
+            .row.two,
+            .row.three {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            bottom: 0;
+            padding: 12px 0 4px;
+            background: linear-gradient(180deg, transparent, var(--bg) 45%);
+        }
+
+        button {
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel-2);
+            color: var(--text);
+            font-size: 13px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            border-color: var(--accent-dim);
+        }
+
+        button.primary {
+            border-color: var(--accent-dim);
+            background: linear-gradient(180deg, #e0b268, #c4923f);
+            color: #201607;
+            font-weight: 700;
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .banner {
+            margin-top: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--panel-2);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .banner.show {
+            display: block;
+        }
+
+        .banner.ok {
+            border-color: rgba(111, 191, 139, 0.5);
+            color: var(--ok);
+            background: rgba(111, 191, 139, 0.08);
+        }
+
+        .banner.err {
+            border-color: rgba(216, 101, 79, 0.55);
+            color: var(--danger);
+            background: rgba(216, 101, 79, 0.08);
+        }
+
+        pre {
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #0f121a;
+            color: #bfc6d6;
+            font-size: 11.5px;
+            line-height: 1.6;
+            overflow: auto;
+            max-height: 320px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 11.5px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .log li {
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--panel);
+            word-break: break-all;
+        }
+
+        .log li.ok {
+            color: var(--ok);
+        }
+
+        .log li.err {
+            color: var(--danger);
+        }
+
+        .log li .time {
+            color: #5f6779;
+            margin-right: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .keep-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .keep-list span {
+            padding: 3px 8px;
+            border: 1px dashed var(--border);
+            border-radius: 999px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .form-pane {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="identity">
+        <span class="badge strong">剧本编辑器</span>
+        <span id="scenarioName" class="badge">剧本 --</span>
+    </div>
+    <div class="room-field">
+        <span>生效房间</span>
+        <input id="roomInput" type="text" value="room1" maxlength="32" autocomplete="off">
+    </div>
+</header>
+
+<main class="layout">
+    <section class="form-pane">
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">剧本主题</span>
+                <span class="hint">title 展示在玩家页面顶部，worldview / background 展示在开场</span>
+            </div>
+            <div class="field">
+                <label>标题 title</label>
+                <input id="titleInput" type="text" spellcheck="false" placeholder="例如：旧宅夜雨">
+            </div>
+            <div class="field">
+                <label>世界观 worldview</label>
+                <textarea id="worldviewInput" class="background-input" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+                <label>开场描述 background</label>
+                <textarea id="backgroundInput" class="background-input" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title">胜负结算 endings</span>
+                <span class="hint">可组合；至少启用一种</span>
+            </div>
+            <div class="check-field">
+                <label>
+                    <input id="lastStandingEnabled" type="checkbox">
+                    lastStanding：只剩一名未倒下玩家时，该玩家胜
+                </label>
+            </div>
+            <div class="check-field">
+                <label>
+                    <input id="maxTurnsEnabled" type="checkbox">
+                    maxTurns：达到轮数上限后判定
+                </label>
+                <div class="row">
+                    <div class="field">
+                        <label>轮数上限</label>
+                        <input id="maxTurnsInput" type="number" min="1" step="1" placeholder="例如 12">
+                    </div>
+                    <p class="rule-hint">规则：存活者中当前 HP 最高者胜；同 HP 比等级，再同比最大 HP，
+                        仍相同则玩家标识字典序最小者胜；全员倒下为平局。</p>
+                </div>
+            </div>
+            <div class="check-field">
+                <label>
+                    <input id="collectItemsEnabled" type="checkbox">
+                    collectItems：集齐指定物品者胜
+                </label>
+                <div class="field">
+                    <label>需要集齐的物品（逗号分隔，可写 found_key 或 钥匙）</label>
+                    <input id="collectItemsInput" type="text" spellcheck="false" placeholder="例如：found_key">
+                </div>
+            </div>
+        </div>
+
+        <div class="section-head">
+            <div>
+                <div class="label">玩家（2~4 人）</div>
+                <div class="hint">玩家标识必须唯一；可新增或删除</div>
+            </div>
+            <button id="addPlayerBtn" type="button">+ 新增玩家</button>
+        </div>
+        <div id="playerCards"></div>
+
+        <div class="actions">
+            <button id="saveBtn" class="primary" type="button">保存并生效</button>
+            <button id="resetBtn" type="button">重置为已保存版本</button>
+        </div>
+        <div id="banner" class="banner"></div>
+    </section>
+
+    <aside class="side-pane">
+        <div>
+            <div class="label">保存后的完整剧本</div>
+            <pre id="jsonPreview">{}</pre>
+        </div>
+        <div>
+            <div class="label">保存策略</div>
+            <div class="keep-list">
+                <span>未上表单的扩展字段原样保留</span>
+                <span>保存后房间重建</span>
+                <span>终局状态清除</span>
+            </div>
+        </div>
+        <div>
+            <div class="label">操作记录</div>
+            <ul id="logList" class="log"></ul>
+        </div>
+    </aside>
+</main>
+
+<script>
+    (function () {
+        "use strict";
+
+        var ROOM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+        var SPLIT_PATTERN = /[,，、\n]/;
+
+        var PLAYER_ID_PATTERN = /^[A-Za-z0-9_-]{1,16}$/;
+        var MIN_PLAYERS = 2;
+        var MAX_PLAYERS = 4;
+
+        var roomInput = document.getElementById("roomInput");
+        var scenarioNameEl = document.getElementById("scenarioName");
+        var titleInput = document.getElementById("titleInput");
+        var worldviewInput = document.getElementById("worldviewInput");
+        var backgroundInput = document.getElementById("backgroundInput");
+        var lastStandingEnabled = document.getElementById("lastStandingEnabled");
+        var maxTurnsEnabled = document.getElementById("maxTurnsEnabled");
+        var maxTurnsInput = document.getElementById("maxTurnsInput");
+        var collectItemsEnabled = document.getElementById("collectItemsEnabled");
+        var collectItemsInput = document.getElementById("collectItemsInput");
+        var addPlayerBtn = document.getElementById("addPlayerBtn");
+        var playerCardsEl = document.getElementById("playerCards");
+        var jsonPreview = document.getElementById("jsonPreview");
+        var logList = document.getElementById("logList");
+        var banner = document.getElementById("banner");
+        var saveBtn = document.getElementById("saveBtn");
+        var resetBtn = document.getElementById("resetBtn");
+
+        // 最近一次从服务端读到的完整剧本：保存时以它为底稿，未上表单的字段不会丢失。
+        var savedScenario = null;
+
+        // 玩家卡片数组：支持改标识、新增与删除，不再用“玩家标识 -> 控件”的固定映射。
+        var playerCards = [];
+
+        /**
+         * 创建一个可编辑的玩家卡片。所有已知玩家字段都上表单，未建模字段在保存时从底稿保留。
+         *
+         * @param playerId  玩家标识初始值
+         * @param index     卡片序号，仅用于标题高亮
+         * @param spec      初始值；新增玩家传空对象
+         * @param fromSaved 是否来自已保存剧本（决定保存时是否继承该玩家的未建模字段）
+         */
+        function createPlayerCard(playerId, index, spec, fromSaved) {
+            var data = spec || {};
+            var card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML =
+                '<div class="card-head">' +
+                '  <span class="card-title' + (index === 0 ? ' self' : '') + '">玩家</span>' +
+                '  <button class="remove-player" type="button">删除</button>' +
+                '</div>' +
+                '<div class="row two">' +
+                '  <div class="field"><label>玩家标识（1~16 位字母/数字/_/-）</label>' +
+                '    <input class="player-id" type="text" maxlength="16" spellcheck="false"></div>' +
+                '  <div class="field"><label>阵营 faction（可留空）</label>' +
+                '    <input class="faction" type="text" spellcheck="false"></div>' +
+                '</div>' +
+                '<div class="field"><label>秘密目标 secretGoal</label>' +
+                '  <textarea class="goal-input" spellcheck="false"></textarea></div>' +
+                '<div class="row two">' +
+                '  <div class="field"><label>当前 HP</label>' +
+                '    <input class="hp" type="number" min="1" step="1"></div>' +
+                '  <div class="field"><label>最大 HP</label>' +
+                '    <input class="max-hp" type="number" min="1" step="1"></div>' +
+                '</div>' +
+                '<div class="row two">' +
+                '  <div class="field"><label>技能 skills（逗号分隔）</label>' +
+                '    <input class="skills" type="text" spellcheck="false"></div>' +
+                '  <div class="field"><label>物品 items（逗号分隔）</label>' +
+                '    <input class="items" type="text" spellcheck="false"></div>' +
+                '</div>' +
+                '<div class="row three">' +
+                '  <div class="field"><label>护甲 AC</label>' +
+                '    <input class="armor-class" type="number" min="1" step="1"></div>' +
+                '  <div class="field"><label>攻击加值</label>' +
+                '    <input class="attack-bonus" type="number" step="1"></div>' +
+                '  <div class="field"><label>伤害骰 damageDice</label>' +
+                '    <input class="damage-dice" type="text" spellcheck="false" placeholder="例如 1d6"></div>' +
+                '</div>';
+
+            var idInput = card.querySelector(".player-id");
+            var goalInput = card.querySelector(".goal-input");
+            var hpInput = card.querySelector(".hp");
+            var maxHpInput = card.querySelector(".max-hp");
+            var skillsInput = card.querySelector(".skills");
+            var itemsInput = card.querySelector(".items");
+            var armorClassInput = card.querySelector(".armor-class");
+            var attackBonusInput = card.querySelector(".attack-bonus");
+            var damageDiceInput = card.querySelector(".damage-dice");
+            var factionInput = card.querySelector(".faction");
+            var removeBtn = card.querySelector(".remove-player");
+            var titleEl = card.querySelector(".card-title");
+
+            idInput.value = playerId || "";
+            goalInput.value = data.secretGoal || "";
+            hpInput.value = typeof data.hp === "number" ? data.hp : "";
+            maxHpInput.value = typeof data.maxHp === "number" ? data.maxHp : "";
+            skillsInput.value = Array.isArray(data.skills) ? data.skills.join("，") : "";
+            itemsInput.value = Array.isArray(data.items) ? data.items.join("，") : "";
+            armorClassInput.value = data.armorClass != null ? data.armorClass : "";
+            attackBonusInput.value = data.attackBonus != null ? data.attackBonus : "";
+            damageDiceInput.value = data.damageDice || "";
+            factionInput.value = data.faction || "";
+
+            var entry = {
+                root: card,
+                originalId: fromSaved ? playerId : "",
+                idInput: idInput,
+                goal: goalInput,
+                hp: hpInput,
+                maxHp: maxHpInput,
+                skills: skillsInput,
+                items: itemsInput,
+                armorClass: armorClassInput,
+                attackBonus: attackBonusInput,
+                damageDice: damageDiceInput,
+                faction: factionInput
+            };
+
+            function syncTitle() {
+                titleEl.textContent = "玩家 " + (idInput.value.trim() || "（新）");
+            }
+
+            idInput.addEventListener("input", syncTitle);
+            removeBtn.addEventListener("click", function () {
+                removePlayerCard(entry);
+            });
+            syncTitle();
+            return entry;
+        }
+
+        /**
+         * 删除一张玩家卡片；人数不能低于剧本下限。
+         */
+        function removePlayerCard(entry) {
+            if (playerCards.length <= MIN_PLAYERS) {
+                showBanner("至少需要 " + MIN_PLAYERS + " 名玩家", "err");
+                return;
+            }
+            var index = playerCards.indexOf(entry);
+            if (index >= 0) {
+                playerCards.splice(index, 1);
+                playerCardsEl.removeChild(entry.root);
+                syncAddButton();
+                refreshPreview();
+            }
+        }
+
+        /**
+         * 选一个尚未占用的玩家标识，避免新增时与现有卡片冲突。
+         */
+        function nextPlayerId() {
+            var used = playerCards.map(function (entry) {
+                return entry.idInput.value.trim();
+            });
+            var candidates = ["A", "B", "C", "D"];
+            for (var i = 0; i < candidates.length; i++) {
+                if (used.indexOf(candidates[i]) === -1) {
+                    return candidates[i];
+                }
+            }
+            var n = 1;
+            while (used.indexOf("P" + n) !== -1) {
+                n++;
+            }
+            return "P" + n;
+        }
+
+        function syncAddButton() {
+            addPlayerBtn.disabled = playerCards.length >= MAX_PLAYERS;
+        }
+
+        function addPlayerCard() {
+            if (playerCards.length >= MAX_PLAYERS) {
+                showBanner("最多支持 " + MAX_PLAYERS + " 名玩家", "err");
+                return;
+            }
+            var entry = createPlayerCard(nextPlayerId(), playerCards.length, {}, false);
+            playerCards.push(entry);
+            playerCardsEl.appendChild(entry.root);
+            syncAddButton();
+            refreshPreview();
+        }
+
+        function log(text, kind) {
+            var item = document.createElement("li");
+            if (kind) {
+                item.className = kind;
+            }
+            var time = document.createElement("span");
+            time.className = "time";
+            time.textContent = new Date().toLocaleTimeString("zh-CN", {hour12: false});
+            item.appendChild(time);
+            item.appendChild(document.createTextNode(text));
+            logList.insertBefore(item, logList.firstChild);
+            while (logList.children.length > 30) {
+                logList.removeChild(logList.lastChild);
+            }
+        }
+
+        function showBanner(text, kind) {
+            banner.textContent = text;
+            banner.className = "banner show" + (kind ? " " + kind : "");
+        }
+
+        function parseSkills(value) {
+            return value.split(SPLIT_PATTERN)
+                .map(function (item) {
+                    return item.trim();
+                })
+                .filter(function (item) {
+                    return item.length > 0;
+                });
+        }
+
+        function fillForm(scenario) {
+            savedScenario = scenario;
+            var title = scenario.title || "未命名";
+            document.title = "剧本编辑器 · " + title;
+            scenarioNameEl.textContent = "剧本 " + title;
+            titleInput.value = scenario.title || "";
+            worldviewInput.value = scenario.worldview || "";
+            backgroundInput.value = scenario.background || "";
+
+            var endings = scenario.endings || {};
+            lastStandingEnabled.checked = !!(endings.lastStanding && endings.lastStanding.enabled);
+            maxTurnsEnabled.checked = !!(endings.maxTurns && endings.maxTurns.enabled);
+            maxTurnsInput.value = endings.maxTurns && endings.maxTurns.turns != null
+                ? endings.maxTurns.turns : "";
+            collectItemsEnabled.checked = !!(endings.collectItems && endings.collectItems.enabled);
+            collectItemsInput.value = endings.collectItems && Array.isArray(endings.collectItems.items)
+                ? endings.collectItems.items.join("，") : "";
+
+            // 玩家区块完全按剧本 players 的键动态生成（2~4 人），不再写死 A/B。
+            playerCardsEl.innerHTML = "";
+            playerCards = [];
+            var ids = scenario.players ? Object.keys(scenario.players) : [];
+            ids.forEach(function (id, index) {
+                var spec = scenario.players[id] || {};
+                var entry = createPlayerCard(id, index, spec, true);
+                playerCards.push(entry);
+                playerCardsEl.appendChild(entry.root);
+            });
+            syncAddButton();
+            refreshPreview();
+        }
+
+        /**
+         * 必填整数：空值或非整数都直接给字段级错误，避免把 NaN/null 发到服务端。
+         */
+        function requiredInteger(input, label) {
+            var raw = input.value.trim();
+            if (raw === "") {
+                throw new Error(label + " 不能为空");
+            }
+            var value = Number(raw);
+            if (!Number.isInteger(value)) {
+                throw new Error(label + " 必须是整数");
+            }
+            return value;
+        }
+
+        /**
+         * 可选整数：留空返回 null，由服务端使用战斗规则默认值。
+         */
+        function optionalInteger(input, label) {
+            var raw = input.value.trim();
+            if (raw === "") {
+                return null;
+            }
+            var value = Number(raw);
+            if (!Number.isInteger(value)) {
+                throw new Error(label + " 必须是整数");
+            }
+            return value;
+        }
+
+        /**
+         * 由表单构造完整剧本：以服务端底稿深拷贝，覆盖所有表单字段，未建模字段原样保留。
+         */
+        function buildScenario() {
+            if (!savedScenario) {
+                throw new Error("剧本尚未加载完成，请稍后再试");
+            }
+            if (playerCards.length < MIN_PLAYERS || playerCards.length > MAX_PLAYERS) {
+                throw new Error("玩家人数必须在 " + MIN_PLAYERS + "~" + MAX_PLAYERS + " 之间");
+            }
+
+            var next = JSON.parse(JSON.stringify(savedScenario));
+            next.title = titleInput.value.trim();
+            next.worldview = worldviewInput.value;
+            next.background = backgroundInput.value;
+
+            var endings = next.endings && typeof next.endings === "object" ? next.endings : {};
+            endings.lastStanding = Object.assign({}, endings.lastStanding, {
+                enabled: lastStandingEnabled.checked
+            });
+            endings.maxTurns = Object.assign({}, endings.maxTurns, {
+                enabled: maxTurnsEnabled.checked
+            });
+            var turnsRaw = maxTurnsInput.value.trim();
+            if (turnsRaw === "") {
+                endings.maxTurns.turns = null;
+            } else {
+                var turns = Number(turnsRaw);
+                if (!Number.isInteger(turns)) {
+                    throw new Error("maxTurns 轮数上限必须是整数");
+                }
+                endings.maxTurns.turns = turns;
+            }
+            endings.collectItems = Object.assign({}, endings.collectItems, {
+                enabled: collectItemsEnabled.checked,
+                items: parseSkills(collectItemsInput.value)
+            });
+            next.endings = endings;
+
+            next.players = {};
+            var seen = {};
+            playerCards.forEach(function (entry) {
+                var id = entry.idInput.value.trim();
+                if (!PLAYER_ID_PATTERN.test(id)) {
+                    throw new Error("玩家标识「" + id + "」非法：仅允许 1~16 位字母/数字/下划线/短横线");
+                }
+                if (seen[id]) {
+                    throw new Error("玩家标识「" + id + "」重复");
+                }
+                seen[id] = true;
+
+                // 改标识时仍从原玩家底稿继承未建模字段；新增玩家从一份完整默认值开始。
+                var base = entry.originalId && savedScenario.players && savedScenario.players[entry.originalId]
+                    ? JSON.parse(JSON.stringify(savedScenario.players[entry.originalId]))
+                    : {
+                        secretGoal: "",
+                        hp: 20,
+                        maxHp: 20,
+                        skills: [],
+                        items: [],
+                        armorClass: 10,
+                        attackBonus: 2,
+                        damageDice: "1d6",
+                        faction: null
+                    };
+
+                base.secretGoal = entry.goal.value;
+                base.hp = requiredInteger(entry.hp, "玩家 " + id + " 的当前 HP");
+                base.maxHp = requiredInteger(entry.maxHp, "玩家 " + id + " 的最大 HP");
+                base.skills = parseSkills(entry.skills.value);
+                base.items = parseSkills(entry.items.value);
+                base.armorClass = optionalInteger(entry.armorClass, "玩家 " + id + " 的护甲 AC");
+                base.attackBonus = optionalInteger(entry.attackBonus, "玩家 " + id + " 的攻击加值");
+                base.damageDice = entry.damageDice.value.trim() || null;
+                base.faction = entry.faction.value.trim() || null;
+                next.players[id] = base;
+            });
+            return next;
+        }
+
+        /**
+         * 表单每次改动都重算右侧 JSON 预览；不完整时显示具体原因，而不是留下旧内容。
+         */
+        function refreshPreview() {
+            if (!savedScenario) {
+                return;
+            }
+            try {
+                jsonPreview.textContent = JSON.stringify(buildScenario(), null, 2);
+            } catch (e) {
+                jsonPreview.textContent = "（表单尚未完整）\n" + e.message;
+            }
+        }
+
+        /**
+         * 把保存/重建响应里的玩家摘要拼成一行，人数来自返回体。
+         */
+        function describePlayers(players) {
+            if (!players) {
+                return "";
+            }
+            return Object.keys(players).map(function (id) {
+                var detail = players[id] || {};
+                return id + ": HP " + detail.hp + "/" + detail.maxHp;
+            }).join("，");
+        }
+
+        function currentRoom() {
+            var room = roomInput.value.trim();
+            if (!ROOM_PATTERN.test(room)) {
+                throw new Error("房间标识非法：仅允许 1~32 位字母/数字/下划线/短横线");
+            }
+            return room;
+        }
+
+        function loadScenario(silent) {
+            return fetch("/admin/scenario", {cache: "no-store"})
+                .then(function (resp) {
+                    if (!resp.ok) {
+                        throw new Error("读取剧本失败 HTTP " + resp.status);
+                    }
+                    return resp.json();
+                })
+                .then(function (scenario) {
+                    fillForm(scenario);
+                    if (!silent) {
+                        log("已读取当前生效剧本：" + (scenario.title || "未命名"));
+                    }
+                    return scenario;
+                });
+        }
+
+        function saveScenario() {
+            var room;
+            var payload;
+            try {
+                room = currentRoom();
+                payload = buildScenario();
+            } catch (e) {
+                showBanner(e.message, "err");
+                log(e.message, "err");
+                return;
+            }
+
+            saveBtn.disabled = true;
+            resetBtn.disabled = true;
+            showBanner("正在保存…", "");
+            log("提交保存：房间 " + room + "，title=" + payload.title + "，玩家 "
+                + playerCards.map(function (entry) {
+                    return entry.idInput.value.trim() + " HP=" + entry.hp.value;
+                }).join("，"));
+
+            fetch("/admin/scenario?room=" + encodeURIComponent(room), {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            }).then(function (resp) {
+                return resp.json().catch(function () {
+                    return {};
+                }).then(function (data) {
+                    return {status: resp.status, ok: resp.ok, data: data};
+                });
+            }).then(function (result) {
+                if (!result.ok) {
+                    var message = result.data.message || ("保存失败 HTTP " + result.status);
+                    showBanner("保存失败（HTTP " + result.status + "）：\n" + message, "err");
+                    log("保存被拒绝：" + message, "err");
+                    return null;
+                }
+                log("保存成功：" + result.data.message, "ok");
+                // 保存接口已完成重建；这里再显式调用 reload，确认该房间确实按新剧本生效。
+                return fetch("/admin/reload?room=" + encodeURIComponent(room), {cache: "no-store"})
+                    .then(function (resp) {
+                        return resp.json().catch(function () {
+                            return {};
+                        }).then(function (data) {
+                            return {status: resp.status, ok: resp.ok, data: data};
+                        });
+                    })
+                    .then(function (reload) {
+                        if (!reload.ok) {
+                            showBanner("剧本已保存，但房间重建失败（HTTP " + reload.status + "）：\n"
+                                + (reload.data.message || ""), "err");
+                            log("房间重建失败：" + (reload.data.message || reload.status), "err");
+                        } else {
+                            showBanner("保存成功，房间 " + room + " 已按新剧本重建。\n"
+                                + describePlayers(reload.data.players)
+                                + "。刷新玩家页面即可看到新视角。", "ok");
+                            log("房间 " + room + " 已重建生效（status=" + reload.data.status + "）", "ok");
+                        }
+                        return loadScenario(true);
+                    });
+            }).catch(function (e) {
+                showBanner("保存请求失败：" + e.message, "err");
+                log("保存请求失败：" + e.message, "err");
+            }).then(function () {
+                saveBtn.disabled = false;
+                resetBtn.disabled = false;
+            });
+        }
+
+        saveBtn.addEventListener("click", saveScenario);
+        addPlayerBtn.addEventListener("click", addPlayerCard);
+
+        // 任何表单改动都刷新右侧 JSON 预览（玩家卡是动态插入的，用事件委托）
+        document.querySelector(".form-pane").addEventListener("input", refreshPreview);
+        document.querySelector(".form-pane").addEventListener("change", refreshPreview);
+
+        resetBtn.addEventListener("click", function () {
+            loadScenario().then(function () {
+                showBanner("已重置为磁盘上当前保存的版本（未保存的修改已丢弃）。", "");
+            }).catch(function (e) {
+                showBanner("重置失败：" + e.message, "err");
+                log("重置失败：" + e.message, "err");
+            });
+        });
+
+        loadScenario().catch(function (e) {
+            showBanner("初始读取失败：" + e.message, "err");
+            log("初始读取失败：" + e.message, "err");
+        });
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多人叙事</title>
+    <style>
+        :root {
+            --bg: #0d0f14;
+            --panel: #151922;
+            --panel-2: #1b202b;
+            --border: #2a3140;
+            --text: #e6e8ee;
+            --muted: #8b93a7;
+            --accent: #d8a657;
+            --accent-dim: #7a5c2e;
+            --danger: #d8654f;
+            --ok: #6fbf8b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 0%, #1a1f2b 0%, var(--bg) 55%);
+            color: var(--text);
+            font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(13, 15, 20, 0.85);
+        }
+
+        .identity {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--muted);
+            background: var(--panel);
+            font-size: 12px;
+        }
+
+        .badge.strong {
+            color: var(--accent);
+            border-color: var(--accent-dim);
+        }
+
+        .status {
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+        }
+
+        .status.on::before {
+            background: var(--ok);
+        }
+
+        .status.off::before {
+            background: var(--danger);
+        }
+
+        /* 顶部经验条：等级 + 当前经验 / 每级阈值 */
+        .xp-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 230px;
+            justify-content: center;
+        }
+
+        .xp-track {
+            width: 140px;
+            height: 7px;
+            border-radius: 999px;
+            background: #202634;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .xp-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+            transition: width 0.35s ease;
+        }
+
+        .xp-text {
+            font-size: 11px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+            min-width: 64px;
+        }
+
+        .brief {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 220px;
+            gap: 18px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(21, 25, 34, 0.9), rgba(21, 25, 34, 0.55));
+        }
+
+        .label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .background {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #cfd4e0;
+        }
+
+        .goal-row {
+            padding: 0 18px 12px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(21, 25, 34, 0.55);
+        }
+
+        .goal {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #efe3c8;
+        }
+
+        .roster {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* 本轮等待状态：已提交 x/y，等待其他人 */
+        .turn-status {
+            margin-top: 8px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: var(--muted);
+            letter-spacing: 0.5px;
+        }
+
+        .turn-status.waiting {
+            color: var(--accent);
+        }
+
+        .hp-card {
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--panel);
+        }
+
+        .hp-card.self {
+            border-color: var(--accent-dim);
+        }
+
+        .hp-card.down {
+            opacity: 0.55;
+        }
+
+        /* 自己掉血时红色闪烁三次，明确提示这次伤害落在自己身上 */
+        .hp-card.flash {
+            animation: hpFlash 0.45s ease-in-out 3;
+        }
+
+        @keyframes hpFlash {
+            0%, 100% {
+                background: var(--panel);
+                box-shadow: none;
+            }
+            50% {
+                background: #3a1d1a;
+                box-shadow: 0 0 12px rgba(216, 101, 79, 0.65);
+            }
+        }
+
+        .hp-card-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            font-size: 12px;
+            gap: 8px;
+        }
+
+        .hp-name {
+            color: var(--text);
+            letter-spacing: 1px;
+        }
+
+        .hp-card.self .hp-name {
+            color: var(--accent);
+        }
+
+        .hp-value {
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .hp-bar {
+            margin-top: 6px;
+            height: 7px;
+            border-radius: 999px;
+            background: #202634;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .hp-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #b04b3a, var(--danger));
+            transition: width 0.3s ease;
+        }
+
+        .layout {
+            flex: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 240px;
+            min-height: 0;
+        }
+
+        .story {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 14px 18px;
+            border-right: 1px solid var(--border);
+        }
+
+        .story-stream {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 6px;
+            scroll-behavior: smooth;
+        }
+
+        .bubble {
+            max-width: 82%;
+            padding: 10px 13px;
+            border-radius: 12px 12px 12px 3px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            font-size: 14px;
+            line-height: 1.75;
+            color: #dfe3ec;
+            animation: rise 0.25s ease-out;
+        }
+
+        .bubble .bubble-time {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--muted);
+        }
+
+        .bubble.placeholder {
+            color: var(--muted);
+            border-style: dashed;
+            background: transparent;
+        }
+
+        /* 升级专属叙事：金色边框，与普通叙事气泡区分 */
+        .bubble.levelup {
+            border-color: var(--accent-dim);
+            background: linear-gradient(180deg, rgba(216, 166, 87, 0.16), rgba(27, 32, 43, 0.95));
+        }
+
+        .bubble.levelup .bubble-time {
+            color: var(--accent);
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .inventory {
+            padding: 14px 16px;
+            background: rgba(21, 25, 34, 0.5);
+            overflow-y: auto;
+        }
+
+        .inventory ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .inventory li {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+            font-size: 13px;
+            color: #d7dbe5;
+        }
+
+        .inventory .empty {
+            color: var(--muted);
+            font-size: 12px;
+            border-style: dashed;
+            background: transparent;
+        }
+
+        .composer {
+            display: flex;
+            gap: 10px;
+            padding: 12px 18px 16px;
+            border-top: 1px solid var(--border);
+            background: rgba(13, 15, 20, 0.9);
+        }
+
+        .composer input {
+            flex: 1;
+            padding: 11px 13px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .composer input:focus {
+            border-color: var(--accent-dim);
+        }
+
+        .composer input::placeholder {
+            color: #6c7488;
+        }
+
+        .composer button {
+            padding: 0 22px;
+            border-radius: 9px;
+            border: 1px solid var(--accent-dim);
+            background: linear-gradient(180deg, #e0b268, #c4923f);
+            color: #201607;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+
+        .composer button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* 观望按钮：与发送按钮同高，但视觉更轻 */
+        .composer button.ghost {
+            padding: 0 16px;
+            border-color: var(--border);
+            background: var(--panel-2);
+            color: var(--text);
+            font-weight: 400;
+        }
+
+        .composer button.ghost:hover {
+            border-color: var(--accent-dim);
+        }
+
+        /* 剧本标题：完全来自服务端 title，不再硬编码任何主题字样 */
+        .scenario-title {
+            max-width: 300px;
+            padding-right: 12px;
+            border-right: 1px solid var(--border);
+            color: var(--accent);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .brief-text .label.second {
+            margin-top: 12px;
+        }
+
+        /* 终局结算面板：覆盖整个视口，进入只读态 */
+        .ending-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(6, 8, 12, 0.78);
+            backdrop-filter: blur(6px);
+            animation: fade-in 0.25s ease;
+        }
+
+        .ending-overlay[hidden] {
+            display: none;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .ending-panel {
+            width: min(620px, 100%);
+            max-height: 86vh;
+            overflow-y: auto;
+            padding: 26px 28px 22px;
+            border: 1px solid var(--accent-dim);
+            border-radius: 14px;
+            background: linear-gradient(180deg, #1c2130, #121620);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+            animation: rise 0.35s ease;
+        }
+
+        .ending-panel.lose {
+            border-color: #5b3340;
+        }
+
+        .ending-panel.draw {
+            border-color: var(--border);
+        }
+
+        .ending-kicker {
+            font-size: 11px;
+            letter-spacing: 4px;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .ending-headline {
+            margin: 8px 0 10px;
+            font-size: 28px;
+            letter-spacing: 3px;
+            color: var(--text);
+        }
+
+        .ending-panel.win .ending-headline {
+            color: var(--accent);
+        }
+
+        .ending-panel.lose .ending-headline {
+            color: #e2a0ad;
+        }
+
+        .ending-narrative {
+            margin: 0 0 16px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #d5dae6;
+        }
+
+        .ending-conditions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .ending-chip {
+            padding: 4px 10px;
+            border: 1px solid var(--accent-dim);
+            border-radius: 999px;
+            color: #efd9b0;
+            background: rgba(216, 166, 87, 0.1);
+            font-size: 12px;
+        }
+
+        .ending-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .ending-table th,
+        .ending-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .ending-table th {
+            color: var(--muted);
+            font-weight: 400;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .ending-table tr.winner td {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .ending-table td.defeated {
+            color: var(--danger);
+        }
+
+        .ending-hint {
+            margin: 16px 0 0;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 760px) {
+            .brief {
+                grid-template-columns: 1fr;
+            }
+
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .story {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .inventory {
+                max-height: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="identity">
+        <span id="scenarioTitle" class="scenario-title">剧本加载中…</span>
+        <span id="roomBadge" class="badge strong">房间 --</span>
+        <span id="playerBadge" class="badge">玩家 --</span>
+        <span id="turnBadge" class="badge">第 1 轮</span>
+    </div>
+    <div class="xp-block">
+        <span id="levelBadge" class="badge strong">Lv.1</span>
+        <div class="xp-track"><div id="xpFill" class="xp-fill"></div></div>
+        <span id="xpText" class="xp-text">0 / 100</span>
+    </div>
+    <div id="status" class="status off">未连接</div>
+</header>
+
+<section class="brief">
+    <div class="brief-text">
+        <div class="label">世界观</div>
+        <p id="worldview" class="background">正在加载剧本…</p>
+        <div class="label second">开场</div>
+        <p id="background" class="background">正在加载剧本…</p>
+    </div>
+    <div>
+        <div class="label">战况</div>
+        <div id="roster" class="roster"></div>
+        <div id="turnStatus" class="turn-status">等待本轮第一份行动…</div>
+    </div>
+</section>
+
+<section class="goal-row">
+    <div class="label">你的秘密目标</div>
+    <p id="secretGoal" class="goal">—</p>
+</section>
+
+<main class="layout">
+    <section class="story">
+        <div class="label">叙事</div>
+        <div id="story" class="story-stream">
+            <div class="bubble placeholder" id="storyPlaceholder">等待你的第一个行动…</div>
+        </div>
+    </section>
+    <aside class="inventory">
+        <div class="label">物品栏</div>
+        <ul id="inventoryList">
+            <li class="empty">背包还是空的</li>
+        </ul>
+    </aside>
+</main>
+
+<footer class="composer">
+    <input id="intentInput" type="text" maxlength="200" autocomplete="off"
+           placeholder="你要做什么？例如：我推开门，听听走廊尽头的声音">
+    <button id="skipBtn" class="ghost" type="button">观望</button>
+    <button id="sendBtn">发送</button>
+</footer>
+
+<div id="endingOverlay" class="ending-overlay" hidden>
+    <div id="endingPanel" class="ending-panel" role="dialog" aria-modal="true" aria-labelledby="endingHeadline">
+        <div class="ending-kicker">对局结束</div>
+        <h2 id="endingHeadline" class="ending-headline"></h2>
+        <p id="endingNarrative" class="ending-narrative"></p>
+        <div id="endingConditions" class="ending-conditions"></div>
+        <table class="ending-table">
+            <thead>
+            <tr>
+                <th>玩家</th>
+                <th>等级</th>
+                <th>HP</th>
+                <th>阵营</th>
+                <th>状态</th>
+            </tr>
+            </thead>
+            <tbody id="endingPlayers"></tbody>
+        </table>
+        <p class="ending-hint">本局已结束，输入已锁定。管理员保存或重载剧本后，本房间会回到初始状态，可重新开始。</p>
+    </div>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        var ROOM_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+        var RECONNECT_INITIAL_MS = 1000;
+        var RECONNECT_MAX_MS = 15000;
+        // 服务端在“同房间同玩家重复连接”时用 1000 + 该 reason 关闭旧会话。
+        // 此时旧页面必须停止重连，否则两个页面会互相顶替，形成每秒一次的重连循环。
+        var WS_NORMAL_CLOSURE = 1000;
+        var REPLACED_REASON = "replaced by newer connection";
+        var ITEM_DISPLAY = {
+            found_key: "钥匙"
+        };
+        var PLACEHOLDER_ID = "storyPlaceholder";
+        var ENDING_LABELS = {
+            collect_items: "集齐指定物品",
+            last_standing: "成为唯一没有倒下的玩家",
+            max_turns: "达到轮数上限后按剩余生命判定"
+        };
+
+        var params = new URLSearchParams(window.location.search);
+        var room = params.get("room");
+        var player = params.get("player");
+
+        var roomBadge = document.getElementById("roomBadge");
+        var playerBadge = document.getElementById("playerBadge");
+        var turnBadge = document.getElementById("turnBadge");
+        var turnStatusEl = document.getElementById("turnStatus");
+        var statusEl = document.getElementById("status");
+        var scenarioTitleEl = document.getElementById("scenarioTitle");
+        var worldviewEl = document.getElementById("worldview");
+        var backgroundEl = document.getElementById("background");
+        var secretGoalEl = document.getElementById("secretGoal");
+        var rosterEl = document.getElementById("roster");
+        var levelBadge = document.getElementById("levelBadge");
+        var xpFill = document.getElementById("xpFill");
+        var xpText = document.getElementById("xpText");
+        var storyEl = document.getElementById("story");
+        var inventoryEl = document.getElementById("inventoryList");
+        var inputEl = document.getElementById("intentInput");
+        var sendBtn = document.getElementById("sendBtn");
+        var skipBtn = document.getElementById("skipBtn");
+        var endingOverlay = document.getElementById("endingOverlay");
+        var endingPanel = document.getElementById("endingPanel");
+        var endingHeadline = document.getElementById("endingHeadline");
+        var endingNarrative = document.getElementById("endingNarrative");
+        var endingConditions = document.getElementById("endingConditions");
+        var endingPlayers = document.getElementById("endingPlayers");
+
+        var socket = null;
+        // 终局后页面进入只读态：不再允许发送、观望或继续追加可操作状态
+        var ended = false;
+        var reconnectDelay = RECONNECT_INITIAL_MS;
+        var reconnectTimer = null;
+        var ready = !!(room && ROOM_PATTERN.test(room) && player);
+        // 记录双方上一次的 HP，用于判断“自己掉血”并触发红色闪烁
+        var previousHp = {};
+
+        roomBadge.textContent = room ? ("房间 " + room) : "房间 --";
+        playerBadge.textContent = player ? ("玩家 " + player) : "玩家 --";
+
+        function setStatus(text, state) {
+            statusEl.textContent = text;
+            statusEl.className = "status " + (state || "off");
+        }
+
+        function wsUrl() {
+            var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return proto + "//" + window.location.host + "/ws?room=" + encodeURIComponent(room)
+                + "&player=" + encodeURIComponent(player);
+        }
+
+        function itemLabel(token) {
+            return ITEM_DISPLAY[token] || token;
+        }
+
+        function renderInventory(items) {
+            inventoryEl.innerHTML = "";
+            if (!Array.isArray(items) || items.length === 0) {
+                var empty = document.createElement("li");
+                empty.className = "empty";
+                empty.textContent = "背包还是空的";
+                inventoryEl.appendChild(empty);
+                return;
+            }
+            items.forEach(function (token) {
+                var li = document.createElement("li");
+                li.textContent = itemLabel(token);
+                inventoryEl.appendChild(li);
+            });
+        }
+
+        function renderRoster(players, fallbackHp, fallbackMaxHp) {
+            var list = Array.isArray(players) && players.length > 0
+                ? players
+                : [{playerId: player, name: player, hp: fallbackHp, maxHp: fallbackMaxHp}];
+            rosterEl.innerHTML = "";
+            list.forEach(function (state) {
+                var isSelf = state.playerId === player;
+                var card = document.createElement("div");
+                card.className = "hp-card" + (isSelf ? " self" : "") + (state.defeated ? " down" : "");
+
+                var head = document.createElement("div");
+                head.className = "hp-card-head";
+                var name = document.createElement("span");
+                name.className = "hp-name";
+                name.textContent = (state.name || state.playerId) + " Lv." + (state.level || 1)
+                    + (isSelf ? "（你）" : "");
+                var value = document.createElement("span");
+                value.className = "hp-value";
+                value.textContent = state.hp + " / " + state.maxHp;
+                head.appendChild(name);
+                head.appendChild(value);
+
+                var bar = document.createElement("div");
+                bar.className = "hp-bar";
+                var fill = document.createElement("div");
+                fill.className = "hp-fill";
+                var ratio = state.maxHp > 0 ? Math.max(0, Math.min(1, state.hp / state.maxHp)) : 0;
+                fill.style.width = (ratio * 100).toFixed(1) + "%";
+                bar.appendChild(fill);
+
+                card.appendChild(head);
+                card.appendChild(bar);
+
+                // 只有自己的 HP 下降才闪烁；对方掉血不抢自己的视觉焦点
+                var lastHp = previousHp[state.playerId];
+                if (isSelf && typeof lastHp === "number" && state.hp < lastHp) {
+                    card.classList.add("flash");
+                    window.setTimeout(function () {
+                        card.classList.remove("flash");
+                    }, 1400);
+                }
+                previousHp[state.playerId] = state.hp;
+
+                rosterEl.appendChild(card);
+            });
+        }
+
+        function appendBubble(text, kind) {
+            var placeholder = document.getElementById(PLACEHOLDER_ID);
+            if (placeholder) {
+                placeholder.remove();
+            }
+            var bubble = document.createElement("div");
+            bubble.className = "bubble" + (kind ? " " + kind : "");
+            var time = document.createElement("span");
+            time.className = "bubble-time";
+            time.textContent = new Date().toLocaleTimeString("zh-CN", {hour12: false});
+            var body = document.createElement("span");
+            body.textContent = text;
+            bubble.appendChild(time);
+            bubble.appendChild(body);
+            storyEl.appendChild(bubble);
+            storyEl.scrollTop = storyEl.scrollHeight;
+        }
+
+        function renderExperience(view) {
+            var level = typeof view.level === "number" ? view.level : 1;
+            var per = typeof view.expPerLevel === "number" && view.expPerLevel > 0 ? view.expPerLevel : 100;
+            var exp = typeof view.exp === "number" ? view.exp : 0;
+            levelBadge.textContent = "Lv." + level;
+            xpText.textContent = exp + " / " + per;
+            var ratio = Math.max(0, Math.min(1, exp / per));
+            xpFill.style.width = (ratio * 100).toFixed(1) + "%";
+        }
+
+        function setTurnStatus(text, waiting) {
+            turnStatusEl.textContent = text;
+            turnStatusEl.className = "turn-status" + (waiting ? " waiting" : "");
+        }
+
+        /**
+         * 按服务端投影里的 turn / onlinePlayers / submittedPlayers 渲染本轮等待状态。
+         * 在线人数与提交人数都来自房间状态，因此 2~4 人共用同一套逻辑。
+         */
+        function renderTurn(view) {
+            var turn = typeof view.turn === "number" && view.turn > 0 ? view.turn : 1;
+            turnBadge.textContent = "第 " + turn + " 轮";
+            if (ended) {
+                setTurnStatus("第 " + turn + " 轮 · 对局已结束，本局不再接受新行动", false);
+                return;
+            }
+            var online = Array.isArray(view.onlinePlayers) ? view.onlinePlayers : [];
+            var submitted = Array.isArray(view.submittedPlayers) ? view.submittedPlayers : [];
+            if (online.length === 0) {
+                setTurnStatus("第 " + turn + " 轮：当前没有其他在线玩家", false);
+                return;
+            }
+            var waiting = online.filter(function (id) {
+                return submitted.indexOf(id) === -1;
+            });
+            var prefix = "第 " + turn + " 轮 · 已提交 " + submitted.length + "/" + online.length;
+            if (waiting.length === 0) {
+                setTurnStatus(prefix + "，正在结算…", true);
+            } else {
+                setTurnStatus(prefix + "，等待 " + waiting.join("、"), true);
+            }
+        }
+
+        /**
+         * 渲染终局结算面板：列出满足的条件与每名玩家的最终公开状态，并把页面锁为只读。
+         * 所有文本都通过 textContent 写入，剧本内容不会被当成 HTML 执行。
+         */
+        function renderEnding(ending) {
+            ended = true;
+            var outcome = ending.outcome === "win" || ending.outcome === "lose" ? ending.outcome : "draw";
+            endingPanel.className = "ending-panel " + outcome;
+            endingHeadline.textContent = outcome === "win" ? "你赢了" : (outcome === "lose" ? "你输了" : "平局");
+            endingNarrative.textContent = ending.narrative || "对局已经结束。";
+
+            endingConditions.innerHTML = "";
+            var codes = Array.isArray(ending.conditions) && ending.conditions.length > 0
+                ? ending.conditions : [ending.condition];
+            codes.forEach(function (code) {
+                var chip = document.createElement("span");
+                chip.className = "ending-chip";
+                chip.textContent = ENDING_LABELS[code] || code;
+                endingConditions.appendChild(chip);
+            });
+
+            endingPlayers.innerHTML = "";
+            var players = Array.isArray(ending.players) ? ending.players : [];
+            players.forEach(function (player) {
+                var row = document.createElement("tr");
+                if (player.playerId === ending.winnerId) {
+                    row.className = "winner";
+                }
+                var name = document.createElement("td");
+                name.textContent = player.name || player.playerId;
+                var level = document.createElement("td");
+                level.textContent = "Lv." + player.level;
+                var hp = document.createElement("td");
+                hp.textContent = player.hp + " / " + player.maxHp;
+                var faction = document.createElement("td");
+                faction.textContent = player.faction || "—";
+                var status = document.createElement("td");
+                status.textContent = player.defeated ? "倒下" : "存活";
+                if (player.defeated) {
+                    status.className = "defeated";
+                }
+                row.appendChild(name);
+                row.appendChild(level);
+                row.appendChild(hp);
+                row.appendChild(faction);
+                row.appendChild(status);
+                endingPlayers.appendChild(row);
+            });
+
+            endingOverlay.hidden = false;
+            inputEl.disabled = true;
+            inputEl.placeholder = "本局已结束";
+            sendBtn.disabled = true;
+            skipBtn.disabled = true;
+        }
+
+        function applyView(view, allowBubble) {
+            if (!view) {
+                return;
+            }
+            if (view.title) {
+                scenarioTitleEl.textContent = view.title;
+                document.title = view.title + " · 多人叙事";
+            }
+            if (view.worldview) {
+                worldviewEl.textContent = view.worldview;
+            }
+            if (view.background) {
+                backgroundEl.textContent = view.background;
+            }
+            if (view.ending) {
+                renderEnding(view.ending);
+            }
+            if (view.secretGoal) {
+                secretGoalEl.textContent = view.secretGoal;
+            }
+            if (typeof view.hp === "number" && typeof view.maxHp === "number") {
+                renderRoster(view.publicPlayers, view.hp, view.maxHp);
+            }
+            renderTurn(view);
+            renderExperience(view);
+            renderInventory(view.myInventory);
+            if (allowBubble && typeof view.narrativeText === "string" && view.narrativeText.trim()) {
+                appendBubble(view.narrativeText.trim());
+            }
+            // 升级叙事与普通叙事同属一份 PlayerView，但渲染为紧随其后的独立金色气泡。
+            if (allowBubble && typeof view.levelUpNarrative === "string" && view.levelUpNarrative.trim()) {
+                appendBubble("【升级】" + view.levelUpNarrative.trim(), "levelup");
+            }
+        }
+
+        function handleMessage(raw) {
+            var view;
+            try {
+                view = JSON.parse(raw);
+            } catch (e) {
+                return;
+            }
+            applyView(view, true);
+        }
+
+        function fetchLatestState() {
+            fetch("/debug/log?room=" + encodeURIComponent(room) + "&player=" + encodeURIComponent(player))
+                .then(function (response) {
+                    return response.ok ? response.json() : [];
+                })
+                .then(function (entries) {
+                    if (Array.isArray(entries) && entries.length > 0) {
+                        applyView(entries[entries.length - 1].message, false);
+                    }
+                })
+                .catch(function () {
+                    // 拉取失败不阻塞重连，WS 的初始视角会补上状态
+                });
+        }
+
+        function scheduleReconnect() {
+            if (!ready) {
+                return;
+            }
+            var delay = reconnectDelay;
+            reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
+            setStatus("已断开，" + Math.round(delay / 1000) + " 秒后重连", "off");
+            reconnectTimer = window.setTimeout(connect, delay);
+        }
+
+        function connect() {
+            if (!ready) {
+                return;
+            }
+            if (reconnectTimer) {
+                window.clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+                return;
+            }
+
+            setStatus("连接中…", "off");
+            var ws = new WebSocket(wsUrl());
+            socket = ws;
+
+            ws.onopen = function () {
+                if (socket !== ws) {
+                    return;
+                }
+                reconnectDelay = RECONNECT_INITIAL_MS;
+                setStatus("已连接", "on");
+                // 重连成功后重新拉取一次状态，避免错过断线期间的变化
+                fetchLatestState();
+            };
+
+            ws.onmessage = function (event) {
+                if (socket !== ws) {
+                    return;
+                }
+                handleMessage(event.data);
+            };
+
+            ws.onclose = function (event) {
+                if (socket !== ws) {
+                    return;
+                }
+                socket = null;
+                if (event && event.code === WS_NORMAL_CLOSURE && event.reason === REPLACED_REASON) {
+                    ready = false;
+                    setStatus("本页已被另一个连接接管，已停止接收", "off");
+                    return;
+                }
+                scheduleReconnect();
+            };
+
+            ws.onerror = function () {
+                // 关闭事件随后到达，由 onclose 统一处理重连
+            };
+        }
+
+        /**
+         * 提交一条行动：skip=true 表示「观望」，等同提交无行动。
+         * 接口只负责入队，因此这里按返回体更新等待状态，而不是等待叙事气泡。
+         */
+        function submitAction(skip) {
+            if (ended) {
+                return;
+            }
+            var intent = inputEl.value.trim();
+            if (!skip && !intent) {
+                return;
+            }
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                setStatus("连接未就绪，稍后再试", "off");
+                return;
+            }
+            sendBtn.disabled = true;
+            skipBtn.disabled = true;
+            var payload = {
+                room: room,
+                from: player,
+                intent: skip ? "" : intent,
+                "private": true,
+                skip: !!skip
+            };
+            fetch("/action", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            }).then(function (response) {
+                return response.json().catch(function () {
+                    return {};
+                }).then(function (body) {
+                    if (!response.ok) {
+                        throw new Error(body.message || ("HTTP " + response.status));
+                    }
+                    if (!skip) {
+                        inputEl.value = "";
+                    }
+                    if (body.status === "settled") {
+                        setTurnStatus("第 " + body.turn + " 轮已全部提交并统一结算，正在推送各自视角…", true);
+                    } else {
+                        setTurnStatus(body.message || "已记录，等待本轮结算", true);
+                    }
+                });
+            }).catch(function (error) {
+                setStatus("发送失败：" + error.message, "off");
+            }).then(function () {
+                // 结算可能在本请求期间到达，此时保持只读态，不能把按钮重新点亮
+                if (!ended) {
+                    sendBtn.disabled = false;
+                    skipBtn.disabled = false;
+                }
+            });
+        }
+
+        function sendIntent() {
+            submitAction(false);
+        }
+
+        function sendSkip() {
+            submitAction(true);
+        }
+
+        sendBtn.addEventListener("click", sendIntent);
+        skipBtn.addEventListener("click", sendSkip);
+        inputEl.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendIntent();
+            }
+        });
+
+        if (!ready) {
+            setStatus("URL 需要 ?room=（1~32 位字母/数字/下划线/短横线）与 ?player=（剧本中的玩家，如 A/B/C）", "off");
+            inputEl.disabled = true;
+            sendBtn.disabled = true;
+            skipBtn.disabled = true;
+        } else {
+            connect();
+        }
+    })();
+</script>
+</body>
+</html>

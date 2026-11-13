@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: ws-skeleton
+
+server:
+  port: ${SERVER_PORT:8080}
+
+ark:
+  # OpenAI 兼容网关的 base URL（要含版本前缀，程序会自己拼 /chat/completions）。
+  # 默认火山方舟 Agent Plan；换厂商只改 ARK_BASE_URL / ARK_MODEL / ARK_API_KEY。
+  base-url: ${ARK_BASE_URL:https://ark.cn-beijing.volces.com/api/plan/v3}
+  model: ${ARK_MODEL:deepseek-v4-1-flash}
+  # 单次调用超时（毫秒）
+  timeout-millis: 9000
+  # 单次调用 max_tokens 上限；不同厂商上限不同，可用 ARK_MAX_TOKENS 覆盖
+  max-tokens: ${ARK_MAX_TOKENS:512}
+  # 每日调用次数上限，防止测试脚本循环调用耗尽额度
+  max-calls-per-day: 200
+  # 请求体是否发送方舟专属的 thinking 字段；不支持的厂商设为 false
+  thinking-enabled: ${ARK_THINKING_ENABLED:true}
+
+scenario:
+  # 剧本目录：默认指向仓库内的 target/scenarios（构建时从仓库源复制）。
+  # 相对启动目录（仓库根）；可用环境变量 SCENARIO_DIR 覆盖。
+  dir: ${SCENARIO_DIR:target/scenarios}
+  # 剧本文件名，启动时与 /admin/reload 都会重新读取这一份
+  file: default.json
+  # 仓库版本源：相对启动目录（仓库根），保存时与运行路径一起原子写入，
+  # 这样重新打包不会把 admin 页面里的编辑结果冲掉；可用 SCENARIO_SOURCE_FILE 覆盖。
+  source-file: ${SCENARIO_SOURCE_FILE:scenarios/default.json}
+
+combat:
+  # 掷骰种子：留空表示每次启动随机；设置后（如 COMBAT_SEED=42）同一进程内骰序可复现，便于测试。
+  seed: ${COMBAT_SEED:}
+
+turn:
+  # 本轮超时：从本轮第一个提交开始计时，超时后未提交的在线玩家按「观望」占位结算。
+  # 测试时可用环境变量 TURN_TIMEOUT_MS 缩短等待（例如 3000）。
+  timeout-millis: ${TURN_TIMEOUT_MS:30000}
+
+logging:
+  file:
+    # 相对启动目录（仓库根）；*.log 已在 .gitignore 中忽略
+    name: app.log
+  level:
+    com.example.pvp: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{20} - %msg%n"
